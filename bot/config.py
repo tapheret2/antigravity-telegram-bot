@@ -12,8 +12,7 @@ class Settings:
     """Immutable application settings loaded from environment."""
 
     telegram_token: str
-    ollama_url: str
-    ollama_model: str
+    gemini_api_key: str
     log_level: str
 
     @classmethod
@@ -26,10 +25,16 @@ class Settings:
                 "Copy .env.example to .env and add your token."
             )
 
+        gemini_key = os.getenv("GEMINI_API_KEY", "")
+        if not gemini_key or gemini_key == "your-gemini-api-key-here":
+            raise ValueError(
+                "GEMINI_API_KEY is not set. "
+                "Add it to your .env file."
+            )
+
         return cls(
             telegram_token=token,
-            ollama_url=os.getenv("OLLAMA_URL", "http://localhost:11434"),
-            ollama_model=os.getenv("OLLAMA_MODEL", "llama3.2"),
+            gemini_api_key=gemini_key,
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         )
 
@@ -38,15 +43,12 @@ class Settings:
 settings = Settings.from_env()
 
 
-# Convenience accessors (backward compat)
+# Convenience accessors
 def get_token() -> str:
     return settings.telegram_token
 
 def get_log_level() -> str:
     return settings.log_level
 
-def get_ollama_url() -> str:
-    return settings.ollama_url
-
-def get_ollama_model() -> str:
-    return settings.ollama_model
+def get_gemini_key() -> str:
+    return settings.gemini_api_key

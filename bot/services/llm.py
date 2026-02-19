@@ -1,8 +1,8 @@
-"""Ollama LLM adapter — sends messages to local Ollama and returns responses."""
+"""Gemini LLM adapter — sends messages to Google Gemini and returns responses."""
 
 import logging
-import httpx
-from bot.config import get_ollama_url, get_ollama_model
+from google import genai
+from bot.config import get_gemini_key
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,9 @@ IDENTITY = (
     "- If something is complex, split into parts.\n"
     "- Optimize for momentum, not perfection.\n"
     "- Tone: professional, calm, direct.\n"
+    "- The user can use /run, /ls, /cat commands to execute actions on their machine.\n"
+    "- When the user asks you to DO something (create files, run commands), "
+    "tell them the exact /run or command to use, don't just give instructions.\n"
 )
 
 # ---------------------------------------------------------------------------
@@ -64,9 +67,13 @@ SYSTEM_PROMPTS: dict[str, str] = {
 }
 
 
+def _get_client() -> genai.Client:
+    """Create and return a Gemini client."""
+    return genai.Client(api_key=get_gemini_key())
+
 
 async def ask_llm(message: str, mode: str = "general") -> str:
-    """Send a message to Ollama and return the text response.
+    """Send a message to Gemini and return the text response.
 
     Args:
         message: The user's message text.
@@ -76,29 +83,20 @@ async def ask_llm(message: str, mode: str = "general") -> str:
         The LLM's text response.
     """
     system_prompt = SYSTEM_PROMPTS.get(mode, SYSTEM_PROMPTS["general"])
-    url = f"{get_ollama_url()}/api/chat"
-    model = get_ollama_model()
-
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": message},
-        ],
-        "stream": False,
-    }
 
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(url, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            return data["message"]["content"] or "⚠️ Empty response from Ollama."
-
-    except httpx.TimeoutException:
-        logger.error("Ollama request timed out")
-        return "⚠️ Ollama timed out. Is the model loaded?"
+        client = _get_client()
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=message,
+            config=genai.types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                max_output_tokens=2048,
+                temperature=0.7,
+            ),
+        )
+        return response.text or "⚠️ Empty response from Gemini."
 
     except Exception as e:
-        logger.error("Ollama API error: %s", e)
+        logger.error("Gemini API error: %s", e)
         return f"⚠️ LLM error: {e}"
