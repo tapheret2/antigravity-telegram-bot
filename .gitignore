@@ -1,6 +1,9 @@
 # Environment
 .env
 
+# Bridge message files
+bridge/
+
 # Python
 __pycache__/
 *.py[cod]
