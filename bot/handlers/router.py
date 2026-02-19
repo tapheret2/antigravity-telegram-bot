@@ -37,19 +37,24 @@ def detect_mode(text: str) -> str:
 
 
 async def route_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Route incoming text message based on detected work mode."""
+    """Route incoming text message through Gemini with detected work mode."""
+    from bot.services.llm import ask_gemini
+    from telegram.constants import ChatAction
+
     text = update.message.text
     mode = detect_mode(text)
     emoji = EMOJI_MAP.get(mode, "📩")
 
     logger.info("Mode detected: %s for message: %.50s", mode, text)
 
-    # For now, acknowledge mode and echo.
-    # Step 4 will wire this to the LLM adapter.
-    if mode == "general":
-        await update.message.reply_text(f"{emoji} {text}")
-    else:
-        await update.message.reply_text(
-            f"{emoji} *Mode: {mode.capitalize()}*\n\n{text}",
-            parse_mode="Markdown",
-        )
+    # Show typing indicator while LLM processes
+    await update.message.chat.send_action(ChatAction.TYPING)
+
+    reply = await ask_gemini(text, mode)
+
+    header = f"{emoji} *{mode.capitalize()}*\n\n" if mode != "general" else ""
+    await update.message.reply_text(
+        f"{header}{reply}",
+        parse_mode="Markdown",
+    )
+

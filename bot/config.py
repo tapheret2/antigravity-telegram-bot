@@ -20,3 +20,15 @@ def get_token() -> str:
 def get_log_level() -> str:
     """Return configured log level, default INFO."""
     return os.getenv("LOG_LEVEL", "INFO").upper()
+
+
+def get_gemini_key() -> str:
+    """Return the Gemini API key or raise if missing."""
+    key = os.getenv("GEMINI_API_KEY")
+    if not key or key == "your-gemini-api-key-here":
+        raise ValueError(
+            "GEMINI_API_KEY is not set. "
+            "Add it to your .env file."
+        )
+    return key
+
