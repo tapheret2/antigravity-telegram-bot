@@ -24,14 +24,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "🚀 *Antigravity Bot is online.*\n\n"
         "I'm your mobile work brain.\n"
-        "Send me anything and I'll echo it back for now.",
+        "Send me a message — I'll auto-detect your work mode:\n"
+        "💡 Brainstorm · 📋 Plan · ✍️ Draft · 🔍 Review · ⚖️ Decide",
         parse_mode="Markdown",
     )
-
-
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Echo any text message back (placeholder for routing layer)."""
-    await update.message.reply_text(f"📩 {update.message.text}")
 
 # ---------------------------------------------------------------------------
 # Main
@@ -39,14 +35,16 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 def main() -> None:
     """Build and run the bot in polling mode."""
+    from telegram.ext import MessageHandler, filters
+    from bot.handlers.router import route_message
+
     token = get_token()
 
     app = ApplicationBuilder().token(token).build()
     app.add_handler(CommandHandler("start", start))
 
-    # Catch-all echo — will be replaced by message router in Step 3
-    from telegram.ext import MessageHandler, filters
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+    # Route all text messages through the mode-detection router
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, route_message))
 
     logger.info("Bot started in polling mode. Press Ctrl+C to stop.")
     app.run_polling()
