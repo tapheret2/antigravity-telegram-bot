@@ -22,13 +22,13 @@ def get_log_level() -> str:
     return os.getenv("LOG_LEVEL", "INFO").upper()
 
 
-def get_gemini_key() -> str:
-    """Return the Gemini API key or raise if missing."""
-    key = os.getenv("GEMINI_API_KEY")
-    if not key or key == "your-gemini-api-key-here":
-        raise ValueError(
-            "GEMINI_API_KEY is not set. "
-            "Add it to your .env file."
-        )
-    return key
+def get_ollama_url() -> str:
+    """Return Ollama server URL, default localhost:11434."""
+    return os.getenv("OLLAMA_URL", "http://localhost:11434")
+
+
+def get_ollama_model() -> str:
+    """Return the Ollama model name to use."""
+    return os.getenv("OLLAMA_MODEL", "llama3.2")
+
 

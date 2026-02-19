@@ -37,8 +37,8 @@ def detect_mode(text: str) -> str:
 
 
 async def route_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Route incoming text message through Gemini with detected work mode."""
-    from bot.services.llm import ask_gemini
+    """Route incoming text message through Ollama with detected work mode."""
+    from bot.services.llm import ask_llm
     from telegram.constants import ChatAction
 
     text = update.message.text
@@ -50,7 +50,7 @@ async def route_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     # Show typing indicator while LLM processes
     await update.message.chat.send_action(ChatAction.TYPING)
 
-    reply = await ask_gemini(text, mode)
+    reply = await ask_llm(text, mode)
 
     header = f"{emoji} *{mode.capitalize()}*\n\n" if mode != "general" else ""
     await update.message.reply_text(
