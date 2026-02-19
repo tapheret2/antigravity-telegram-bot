@@ -75,28 +75,42 @@ def _get_client() -> genai.Client:
 async def ask_llm(message: str, mode: str = "general") -> str:
     """Send a message to Gemini and return the text response.
 
-    Args:
-        message: The user's message text.
-        mode: Detected work mode for system prompt selection.
-
-    Returns:
-        The LLM's text response.
+    Retries automatically on rate limit (429) errors.
     """
+    import asyncio
+
     system_prompt = SYSTEM_PROMPTS.get(mode, SYSTEM_PROMPTS["general"])
+    max_retries = 3
 
-    try:
-        client = _get_client()
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=message,
-            config=genai.types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                max_output_tokens=2048,
-                temperature=0.7,
-            ),
-        )
-        return response.text or "⚠️ Empty response from Gemini."
+    for attempt in range(max_retries):
+        try:
+            client = _get_client()
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=message,
+                config=genai.types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    max_output_tokens=2048,
+                    temperature=0.7,
+                ),
+            )
+            return response.text or "⚠️ Empty response from Gemini."
 
-    except Exception as e:
-        logger.error("Gemini API error: %s", e)
-        return f"⚠️ LLM error: {e}"
+        except Exception as e:
+            error_str = str(e)
+
+            # Rate limit — retry with backoff
+            if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                wait = (attempt + 1) * 15  # 15s, 30s, 45s
+                logger.warning(
+                    "Rate limited (attempt %d/%d), retrying in %ds",
+                    attempt + 1, max_retries, wait,
+                )
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(wait)
+                    continue
+                return "⏳ Rate limit hit. Please wait ~1 minute and try again."
+
+            logger.error("Gemini API error: %s", e)
+            return "⚠️ Something went wrong with the AI. Please try again."
+
