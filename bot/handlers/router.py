@@ -53,8 +53,14 @@ async def route_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     reply = await ask_llm(text, mode)
 
     header = f"{emoji} *{mode.capitalize()}*\n\n" if mode != "general" else ""
-    await update.message.reply_text(
-        f"{header}{reply}",
-        parse_mode="Markdown",
-    )
+    full_reply = f"{header}{reply}"
+
+    # Try Markdown first; fall back to plain text if Ollama response
+    # contains characters that break Telegram's Markdown parser
+    try:
+        await update.message.reply_text(full_reply, parse_mode="Markdown")
+    except Exception:
+        logger.warning("Markdown parse failed, sending as plain text")
+        await update.message.reply_text(full_reply)
+
 
